@@ -1,0 +1,142 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <title>双人联机卡牌（最终可玩版）</title>
+  <style>
+    *{box-sizing:border-box;font-family:system-ui}
+    body{background:#f7f8fa;padding:20px}
+    .room{text-align:center;margin-bottom:20px}
+    button{padding:10px 16px;margin:4px;background:#007bff;color:white;border:none;border-radius:6px;cursor:pointer}
+    input{padding:8px;width:100px}
+    .hand{display:flex;gap:6px;flex-wrap:wrap;justify-content:center;margin:20px 0}
+    .card{width:70px;height:100px;background:white;border:2px solid #222;border-radius:6px;align-items:center;justify-content:center;text-align:center;font-weight:bold;padding:4px;display:flex}
+    .selected{background:#ffecec;border-color:red}
+    .area{border:1px dashed #ccc;padding:20px;border-radius:10px;margin:20px 0;text-align:center}
+  </style>
+</head>
+<body>
+
+<div class="room">
+  <div>房间号：<b id="roomId">-</b></div>
+  <button id="create">创建房间</button>
+  <input id="inputRoom" placeholder="输入房间号">
+  <button id="join">加入房间</button>
+  <button id="reset">重置</button>
+</div>
+
+<div class="area">
+  <h3>我的手牌</h3>
+  <div id="myHand" class="hand"></div>
+  <button id="play">出牌（1-4张）</button>
+</div>
+
+<div class="area">
+  <h3>对方打出的牌</h3>
+  <div id="opponent" class="hand"></div>
+</div>
+
+<script>
+const cardPool = [
+"朱志鑫","苏新皓","张极","张泽禹","左航","宋亚轩","张真源","刘耀文",
+"丁程鑫","马嘉祺","严浩翔","贺峻霖","李天泽","敖子逸","黄宇航","林墨",
+"邓佳鑫","穆祉丞","张峻豪","童禹坤","黄朔","zimo","张函瑞","张桂圆",
+"杨博文","左奇函","王橹杰","陈浚铭","陈思罕","张奕然","魏子宸","李煜东",
+"官俊臣","杨涵博","聂玮辰","陈奕恒","易烊千玺","王俊凯","王源",
+"小新","肥嘟嘟左卫门","典娜","熊大","熊二","猪猪侠","权志龙","李飞","黄锐"
+];
+
+let roomId = null;
+let myHand = [];
+let selected = [];
+let role = null;
+let interval = null;
+
+function shuffle(a){
+  for(let i=a.length-1;i>0;i--){
+    const j=Math.floor(Math.random()*(i+1));
+    [a[i],a[j]]=[a[j],a[i]];
+  }
+  return a;
+}
+
+// 创建房间
+document.getElementById("create").onclick = ()=>{
+  roomId = prompt("输入房间号（如 8888）");
+  if(!roomId) return;
+  role = "a";
+  document.getElementById("roomId").innerText = roomId;
+  myHand = shuffle([...cardPool]).slice(0,10);
+  syncStart();
+  render();
+};
+
+// 加入房间
+document.getElementById("join").onclick = ()=>{
+  roomId = document.getElementById("inputRoom").value.trim();
+  if(!roomId) return alert("输入房间号");
+  role = "b";
+  document.getElementById("roomId").innerText = roomId;
+  myHand = shuffle([...cardPool]).slice(0,10);
+  syncStart();
+  render();
+};
+
+// 选牌
+window.toggle = (card)=>{
+  if(selected.includes(card)){
+    selected = selected.filter(x=>x!==card);
+  }else{
+    if(selected.length>=4) return;
+    selected.push(card);
+  }
+  render();
+};
+
+// 出牌（上传到免费公共同步服务）
+document.getElementById("play").onclick = async ()=>{
+  if(!roomId || !role) return alert("请先进入房间");
+  if(selected.length<1) return alert("至少选1张");
+  await fetch(`https://api.npoint.io/save/${roomId}_${role}`, {
+    method: "POST",
+    body: JSON.stringify(selected),
+  });
+  myHand = myHand.filter(c=>!selected.includes(c));
+  selected = [];
+  render();
+};
+
+// 同步对方牌
+function syncStart(){
+  clearInterval(interval);
+  interval = setInterval(async ()=>{
+    if(!roomId || !role) return;
+    const res = await fetch(`https://api.npoint.io/get/${roomId}_${role=="a"?"b":"a"}`);
+    const data = await res.json();
+    renderOppo(data || []);
+  }, 1500);
+}
+
+// 重置
+document.getElementById("reset").onclick = async ()=>{
+  await fetch(`https://api.npoint.io/save/${roomId}_a`, {method:"POST",body:"[]"});
+  await fetch(`https://api.npoint.io/save/${roomId}_b`, {method:"POST",body:"[]"});
+  selected = [];
+  render();
+};
+
+// 渲染
+function render(){
+  document.getElementById("myHand").innerHTML = myHand.map(c=>
+    `<div class="card ${selected.includes(c)?'selected':''}" onclick="toggle('${c}')">${c}</div>`
+  ).join("");
+}
+
+function renderOppo(cards){
+  document.getElementById("opponent").innerHTML = cards.map(c=>
+    `<div class="card">${c}</div>`
+  ).join("");
+}
+</script>
+</body>
+</html>
