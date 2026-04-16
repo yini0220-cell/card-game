@@ -1,0 +1,30 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <title>双人联机卡牌</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <div class="room">
+    <div>房间号：<span id="roomId">-</span></div>
+    <button id="create">创建房间</button>
+    <input id="inputRoom" placeholder="输入房间号">
+    <button id="join">加入房间</button>
+    <button id="reset">重置本轮</button>
+  </div>
+
+  <div class="area">
+    <h3>我的手牌</h3>
+    <div id="myHand" class="hand"></div>
+    <button id="play">出牌（1-4张）</button>
+  </div>
+
+  <div class="area">
+    <h3>对方打出的牌</h3>
+    <div id="opponentPlayed" class="hand"></div>
+  </div>
+
+  <script type="module" src="game.js"></script>
+</body>
+</html>
